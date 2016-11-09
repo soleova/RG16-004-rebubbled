@@ -15,8 +15,9 @@ static float directionY = UP;
 
 static float positionX = 1.0;
 static float positionY = 0.5;
-static float radius = 40;
 
+static float radius = 40;
+static float playerx = 0.0;
 /*Deklaracije callback funkcija*/
 static void keyboard(unsigned char key, int x, int y);
 static void reshape(int width, int height);
@@ -24,6 +25,8 @@ static void display(void);
 
 /*Metod koji crta lopticu*/
 static void display_ball(void);
+/*Metod koji crta igraca*/
+static void display_player(void);
 /*Metod koji definise skakanje loptice*/
 static void bounce(void);
 /*Metod koji proverava da li je loptica presla opsege*/
@@ -33,7 +36,7 @@ void display_ball(void){
 
 	/* Crtamo lopticu */
         glPushMatrix(); 
-	glColor3f(1.0, -0.5, 0.2);
+	glColor3f(1.0, -0.5, 0.3);
 	glTranslatef(positionX, positionY, 0.0);
 	glBegin(GL_POLYGON);
 	float angle;
@@ -47,6 +50,24 @@ void display_ball(void){
 
 }
 
+void display_player(void){
+	
+	glPushMatrix();
+	glLoadIdentity();
+
+	/*Crtamo igraca koji je u ovom trenutku kvadrat i pomeramo ga na dno ekrana*/
+	glTranslatef(playerx, -480, 0);
+  	glColor3f(0, 0, 1);
+	  glBegin(GL_QUADS); 
+           glVertex3f(-20, -20, 0);
+           glVertex3f(-20, 20, 0);
+           glVertex3f(20, 20, 0);
+           glVertex3f(20, -20, 0);
+          glEnd();
+	glPopMatrix();
+
+}
+
 void display(void)
 {
 	/* Postavlja se boja svih piksela na zadatu boju pozadine. */
@@ -54,6 +75,9 @@ void display(void)
 
 	/* Poziva se funkcija za crtanje loptice */
 	display_ball();
+
+	/* Poziva se funkcija za crtanje igraca */
+	display_player();
 
 	 /* Postavlja se nova slika u prozor. */
 	glutSwapBuffers();
@@ -123,7 +147,17 @@ void reshape(int w, int h)
 
 static void keyboard(unsigned char key, int x, int y)
 {
-   /* Izlazak iz programa */
+   /* Kretanje igraca u desno */
+   if(key == 'd'){
+	if(playerx < width-20){
+	playerx+=5;
+	}
+   } /*Kretanje igraca u levo */
+   else if(key == 'a'){
+	if(playerx > -width+20){
+	playerx-=5;
+	}
+   } /*Izlazak iz programa */
    if(key == 27){
    exit(1);
  }
