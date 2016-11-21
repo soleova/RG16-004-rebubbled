@@ -3,8 +3,8 @@
  
 
 char title[] = "Rebbubled";  
-int windowWidth  = 500;   
-int windowHeight = 500;    
+int windowWidth  = 640;   
+int windowHeight = 480;    
 int windowPosX   = 50;      
 int windowPosY   = 50;      
 
