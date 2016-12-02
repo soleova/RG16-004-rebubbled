@@ -11,3 +11,4 @@ $(PROGRAM): main.o
 clean:
 	-rm -rf *.o 
 	-rm -rf *~
+	-rm -rf *.c~
