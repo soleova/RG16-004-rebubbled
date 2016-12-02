@@ -3,8 +3,8 @@
  
 
 char title[] = "Rebbubled";  
-int windowWidth  = 640;   
-int windowHeight = 480;    
+int windowWidth  = 500;   
+int windowHeight = 500;    
 int windowPosX   = 50;      
 int windowPosY   = 50;      
 
@@ -119,7 +119,7 @@ static void keyboard(unsigned char key, int x, int y)
    } /*Kretanje igraca u levo */
    else if(key == 'a'){
 	if(playerX > clipAreaXLeft+0.1){
-	playerX-=0.2;
+	playerX-=0.02;
 	}
    } /*Izlazak iz programa */
    if(key == 27){
