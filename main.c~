@@ -60,6 +60,9 @@ void display(void) {
     /* Nulti koeficijenti refleksije materijala. */
     GLfloat no_material[] = { 0, 0, 0, 1 };
 
+    /* Koeficijenti ambijentalne refleksije materijala. */
+    GLfloat material_ambient[] = { 0.7, 0.7, 0.7, 1 };
+
     /* Koeficijenti difuzne refleksije materijala. */
     GLfloat material_diffuse[] = { 0.1, 0.5, 0.8, 1 };
 
