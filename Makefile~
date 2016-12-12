@@ -6,8 +6,9 @@ LDLIBS  = -lglut -lGLU -lGL -lm
 $(PROGRAM): main.o
 	$(CC) -o $(PROGRAM) main.o $(LDLIBS)
 
-.PHONY: clean
+.PHONY: clean dist
 
 clean:
-	-rm *.o 
-	-rm *~
+	-rm -rf *.o 
+	-rm -rf *~
+	-rm -rf *.c~
