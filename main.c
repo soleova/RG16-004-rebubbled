@@ -118,7 +118,7 @@ void display(void) {
       glutSolidSphere(ball_radius, 15, 15);
     glPopMatrix();
 
- }
+   }
     /* Crtamo dve manje loptice kada dodje do kolizije */ 
     if(flag==3){
     bounce2();
@@ -130,9 +130,9 @@ void display(void) {
       glMaterialfv(GL_FRONT, GL_SHININESS, no_shininess);
       glMaterialfv(GL_FRONT, GL_EMISSION, material_emission);
       glutSolidSphere(smaller_ball_radius, 15, 15);
-   glPopMatrix();
+    glPopMatrix();
 
-   glPushMatrix();
+    glPushMatrix();
       glTranslatef(ball2_x/2, ball2_y, 0);
       glMaterialfv(GL_FRONT, GL_AMBIENT, material_ambient);
       glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
@@ -140,168 +140,182 @@ void display(void) {
       glMaterialfv(GL_FRONT, GL_SHININESS, no_shininess);
       glMaterialfv(GL_FRONT, GL_EMISSION, no_material);
       glutSolidSphere(smaller_ball_radius, 15, 15);
-   glPopMatrix();
+    glPopMatrix();
    }
  
    /* Ako je pogodjen igrac, izlazimo iz programa. */
-   if(flag == 1 || flag == 2){
-      exit(1);
+    if(flag == 1 || flag == 2){
+       exit(1);
    }
     
    /* Iskljucujemo svetlo da bismo mogli da crtamo strele */
-   glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHTING);
 
    /* Crtamo strelu */
-   glPushMatrix();
-   glTranslatef(player_x, arrow_y, 0);
-    glBegin(GL_LINES);
+    glPushMatrix();
+    glTranslatef(player_x, arrow_y, 0);
+     glBegin(GL_LINES);
        glColor3f(0, 1, 1);
        glVertex3f(arrow_x, arrow_y - 0.3, 0);
        glVertex3f(arrow_x, arrow_y, 0);
-    glEnd();
-   glPopMatrix();
-    
-   /* Postavlja se nova slika u prozor. */
-   glutSwapBuffers(); 
+     glEnd();
+    glPopMatrix();
+   
+    /* Crtamo animirani sareni kvadrat koji ce imitirati pozadinu. */
+    glPushMatrix();
+    glTranslatef(cos(ball_x), sin(ball_y), 0);
+     glBegin(GL_QUADS);	
+      glColor3f(1.0, 0.0, 0.2);
+      glVertex2f(-3.0, -3.0);  
+      glVertex2f(3.0, -3.0);
+      glColor3f(0.1, 0.4, 1.0);
+      glVertex2f(3.0, 3.0);
+      glVertex2f(-3.0, 3.0);
+     glEnd();
+    glPopMatrix();    
+
+    /* Postavlja se nova slika u prozor. */
+    glutSwapBuffers(); 
 }
 
 static void keyboard(unsigned char key, int x, int y){
  
-   switch(key){
-   case 'd':
-            if(player_x < clip_area_x_right - 0.05){
-            player_x += 0.02;
-	    } 
-	    break;
-   case 'a':
-	    if(player_x > clip_area_x_left + 0.05){
-	    player_x -= 0.02;
-	    } 
-	    break;
-   case 'f': 
-	    arrow_animation = 0; 
+    switch(key){
+    case 'd':
+             if(player_x < clip_area_x_right - 0.05){
+             player_x += 0.02;
+	     } 
+	     break;
+    case 'a':
+	     if(player_x > clip_area_x_left + 0.05){
+	     player_x -= 0.02;
+	     } 
+	     break;
+    case 'f': 
+	     arrow_animation = 0; 
 	    
-            if(animation_active){
-          	glutTimerFunc(refresh, timer, 2);
-		arrow_animation = 1;
-	    }          	
-            break;
-   case 27:
-	   exit(1);
-  }
+             if(animation_active){
+          	 glutTimerFunc(refresh, timer, 2);
+		 arrow_animation = 1;
+	     }          	
+             break;
+    case 27:
+	     exit(1);
+    }
 }
  
 static void timer(int value)
 {
  
-   switch (value) {
-   case 1:
-          glutPostRedisplay();
+    switch (value) {
+    case 1:
+             glutPostRedisplay();
 	  
-          if((ball_x - player_x) * (ball_x - player_x) + 
-             (ball_y - player_y) * (ball_y - player_y) <= 
-             (ball_radius) * (ball_radius)){
-	         flag = 1;
-	      // printf("Pogodjen igrac!\n");
-            }
+             if((ball_x - player_x) * (ball_x - player_x) + 
+               (ball_y - player_y) * (ball_y - player_y) <= 
+               (ball_radius) * (ball_radius)){
+	           flag = 1;
+	        // printf("Pogodjen igrac!\n");
+              }
 
-          if((ball2_x - player_x) * (ball2_x - player_x) + 
-              (ball2_y - player_y) * (ball2_y - player_y) <= 
-              (smaller_ball_radius) * (smaller_ball_radius)){
-	        flag = 2;
-	      //printf("Pogodjen igrac manjom lopticom!\n");
-	   }
+             if((ball2_x - player_x) * (ball2_x - player_x) + 
+               (ball2_y - player_y) * (ball2_y - player_y) <= 
+               (smaller_ball_radius) * (smaller_ball_radius)){
+	           flag = 2;
+	        // printf("Pogodjen igrac manjom lopticom!\n");
+	      }
 	  
-          /* Open se postavlja tajmer. */
-	  glutTimerFunc(refresh, timer, 1);
-	  break;
-   case 2:
-	  /* Povecava se y koordinata strele. */
-	  arrow_y += arrow_speed;
+             /* Open se postavlja tajmer. */
+	     glutTimerFunc(refresh, timer, 1);
+	     break;
+    case 2:
+	     /* Povecava se y koordinata strele. */
+	     arrow_y += arrow_speed;
 		
-          /* Ispaljivanje strela. */
-	  shoot();
+             /* Ispaljivanje strela. */
+	     shoot();
 	
 
-          /* Proverava se da li je pogodjena velika lopta. */
-	  if((ball_x - player_x) * (ball_x - player_x) + 
-             (ball_y - arrow_y) * (ball_y - arrow_y) <= 
-             (ball_radius) * (ball_radius)) {
-	        flag = 3;
-	     // printf("Pogodjena velika loptica!\n");	     	
-           }
-	  /* Proverava se da li je pogodjena manja loptica. */
+             /* Proverava se da li je pogodjena velika lopta. */
+	     if((ball_x - player_x) * (ball_x - player_x) + 
+               (ball_y - arrow_y) * (ball_y - arrow_y) <= 
+               (ball_radius) * (ball_radius)) {
+	           flag = 3;
+	        // printf("Pogodjena velika loptica!\n");	     	
+             }
 
-          if((ball2_x - player_x) * (ball2_x - player_x) + 
-             (ball2_y - arrow_y) * (ball2_y - arrow_y) <= 
-             (smaller_ball_radius) * (smaller_ball_radius)){
-	        flag = 4;
+	     /* Proverava se da li je pogodjena manja loptica. */
+
+             if((ball2_x - player_x) * (ball2_x - player_x) + 
+               (ball2_y - arrow_y) * (ball2_y - arrow_y) <= 
+               (smaller_ball_radius) * (smaller_ball_radius)){
+	           flag = 4;
 	     // printf("Pogodjena manja loptica!\n");
-	   }
+	     }
 
-       	  /* Postavlja se ponovo tajmer. */
-	  if (arrow_animation){
-	    glutTimerFunc(refresh, timer, 2);
-	  }
-	  break;
-  }
+       	     /* Postavlja se ponovo tajmer. */
+	     if (arrow_animation){
+	       glutTimerFunc(refresh, timer, 2);
+	     }
+	     break;
+    }
 }
 
 static void bounce(){
 
-   /* Kretanje loptice */
-   ball_x += x_speed;
-   ball_y += y_speed;
+    /* Kretanje loptice */
+    ball_x += x_speed;
+    ball_y += y_speed;
     
-   /* Granice za kretanje lopte */
-   if (ball_x > ball_x_max) {
-      ball_x = ball_x_max;
-      x_speed = -x_speed;
-   } else if (ball_x < ball_x_min) {
-      ball_x = ball_x_min;
-      x_speed = -x_speed;
-   }
-   if (ball_y > ball_y_max) {
-      ball_y = ball_y_max;
-      y_speed = -y_speed;
-   } else if (ball_y < ball_x_min) {
-      ball_y = ball_x_min;
-      y_speed = -y_speed;
-   }
+    /* Granice za kretanje lopte */
+    if (ball_x > ball_x_max) {
+       ball_x = ball_x_max;
+       x_speed = -x_speed;
+    } else if (ball_x < ball_x_min) {
+       ball_x = ball_x_min;
+       x_speed = -x_speed;
+    }
+    if (ball_y > ball_y_max) {
+       ball_y = ball_y_max;
+       y_speed = -y_speed;
+    } else if (ball_y < ball_x_min) {
+       ball_y = ball_x_min;
+       y_speed = -y_speed;
+    }
 }
 
 static void bounce2(void){
 
-   /* Kretanje loptice */
-   ball2_x += x_speed;
-   ball2_y += y_speed;
+    /* Kretanje loptice */
+    ball2_x += x_speed;
+    ball2_y += y_speed;
    
-   /* Granice za kretanje lopte */
+    /* Granice za kretanje lopte */
 
-   if (ball2_x > ball_x_max) {
-      ball2_x = ball_x_max;
-      x_speed = - x_speed;
-   } else if (ball2_x < ball_x_min) {
-      ball2_x = ball_x_min;
-      x_speed = -x_speed;
-   }
-   if (ball2_y > ball_y_max) {
-      ball2_y = ball_y_max;
-      y_speed = -y_speed;
-   } else if (ball2_y < ball_x_min) {
-      ball2_y = ball_x_min;
-      y_speed = -y_speed;
-   }
+    if (ball2_x > ball_x_max) {
+       ball2_x = ball_x_max;
+       x_speed = - x_speed;
+    } else if (ball2_x < ball_x_min) {
+       ball2_x = ball_x_min;
+       x_speed = -x_speed;
+    }
+    if (ball2_y > ball_y_max) {
+       ball2_y = ball_y_max;
+       y_speed = -y_speed;
+    } else if (ball2_y < ball_x_min) {
+       ball2_y = ball_x_min;
+       y_speed = -y_speed;
+    }
 
 }
 static void shoot(void){
 	
-   /* Ako strela predje y granicu, vracamo je dole i postaje neaktivna. */	
+    /* Ako strela predje y granicu, vracamo je dole i postaje neaktivna. */	
 
-   if(arrow_y > ball_y_max){ 
-      arrow_y = ball_x_min;
-      arrow_animation = 0;
-   }
+    if(arrow_y > ball_y_max){ 
+       arrow_y = ball_x_min;
+       arrow_animation = 0;
+    }
 }
 
 
