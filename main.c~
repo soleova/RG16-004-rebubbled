@@ -91,7 +91,7 @@ void display(void) {
     GLfloat low_shininess[] = { 5 };
 
     /* Koeficijent spekularne refleksije za slucaj velike vrednosti koeficijenta. */
-    // GLfloat high_shininess[] = { 100 };
+    GLfloat high_shininess[] = { 100 };
 
     /* Emisiona boja materijala. */
     GLfloat material_emission[] = { 0.3, 0.2, 0.2, 0 };
@@ -202,14 +202,14 @@ static void timer(int value)
              (ball_y - player_y) * (ball_y - player_y) <= 
              (ball_radius) * (ball_radius)){
 	         flag = 1;
-	      // printf("Pogodjen igrac!\n");
+	         printf("Pogodjen igrac!\n");
             }
 
           if((ball2_x - player_x) * (ball2_x - player_x) + 
               (ball2_y - player_y) * (ball2_y - player_y) <= 
               (smaller_ball_radius) * (smaller_ball_radius)){
 	        flag = 2;
-	      //printf("Pogodjen igrac manjom lopticom!\n");
+	        printf("Pogodjen igrac manjom lopticom!\n");
 	   }
 	  
           /* Open se postavlja tajmer. */
@@ -228,7 +228,7 @@ static void timer(int value)
              (ball_y - arrow_y) * (ball_y - arrow_y) <= 
              (ball_radius) * (ball_radius)) {
 	        flag = 3;
-	     // printf("Pogodjena velika loptica!\n");	     	
+	        printf("Pogodjena velika loptica!\n");	     	
            }
 	  /* Proverava se da li je pogodjena manja loptica. */
 
@@ -236,7 +236,7 @@ static void timer(int value)
              (ball2_y - arrow_y) * (ball2_y - arrow_y) <= 
              (smaller_ball_radius) * (smaller_ball_radius)){
 	        flag = 4;
-	     // printf("Pogodjena manja loptica!\n");
+	        printf("Pogodjena manja loptica!\n");
 	   }
 
        	  /* Postavlja se ponovo tajmer. */
