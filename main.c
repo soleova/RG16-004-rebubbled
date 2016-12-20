@@ -314,9 +314,9 @@ static void bounce(){
 
 static void shoot(void){
 	
-   /* Ako strela predje y granicu ili ako je pogodila lopticu,
+   /* Ako strela predje y granicu,
       vracamo je dole i postaje neaktivna. */	
-
+   
    if(arrow_y > clip_area_y_top){ 
       arrow_y = clip_area_y_bottom;
       arrow_animation = 0;
@@ -325,6 +325,7 @@ static void shoot(void){
 
 static Ball* new_ball(float xbr, float ybr, float rbr, int state){
    
+   /* Kreiramo novu loptu. */
    Ball* new_ball = (Ball*)malloc(sizeof(Ball));
    
    if(new_ball == NULL){
@@ -396,11 +397,13 @@ static void keyboard(unsigned char key, int x, int y){
  
    switch(key){
    case 'd':
+            /* Kretanje u desno sve dok ne dodjemo do granice. */
             if(player_x <= clip_area_x_right - 0.05){
             player_x += 0.02;
 	    } 
 	    break;
    case 'a':
+            /* Kretanje u levo sve dok ne dodjemo do granice. */
 	    if(player_x >= clip_area_x_left + 0.05){
 	    player_x -= 0.02;
 	    } 
