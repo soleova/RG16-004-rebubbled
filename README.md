@@ -1,7 +1,8 @@
 #Rebubbled
 
-Igrica u kojoj je cilj pogoditi strelom loptice koje se krecu po ekranu. Kada se pogodi loptica,   
-pojave se dve nove, duplo manje loptice. Ako loptica pogodi igraca, on gubi i izlazi se iz programa.
+Igrica u kojoj je cilj za odredjeno vreme pogoditi strelom loptice koje se krecu po ekranu.  
+Kada se pogodi loptica, pojave se dve nove, manje loptice. Ako loptica pogodi igraca,  
+ili mu istekne vreme, on gubi i izlazi se iz programa.
 
 Kontrola | Akcija
 --- | --- |
