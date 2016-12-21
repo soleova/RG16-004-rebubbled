@@ -24,17 +24,22 @@ int hit_flag;
 static int animation_active;
 static int arrow_animation;
 
-/* Koordinate igraca i strele. */
+/* Koordinate igraca, strele i "tajmera". */
 static float player_x = 0.0;
-static float player_y = -0.95;
+static float player_y = -0.85;
 static float arrow_x = 0.0;
-static float arrow_y = -0.7;
+static float arrow_y = -0.45;
+static float timer_x = 0.98;
 
-/* Brzina strele. */
+/* Brzina strele i "tajmera". */
 static float arrow_speed = 0.05; 
+static float timer_speed = 0.0001;
 
 /* Brzine loptica. */
 float vx[MAX_BALLS], vy[MAX_BALLS];
+
+/* Koordinate loptica. */
+float xpos[MAX_BALLS], ypos[MAX_BALLS];
 
 /* Velicine precnika loptica. */
 static float big_radius = 0.12;
@@ -65,7 +70,7 @@ static int hits(float *x, float *y, float *r);
 /* Funkcija koja proverava da li je strela pogodila loptu.*/
 static int success(float *xpos, float *ypos, float *r);
 /* Funkcija koja pravi novu loptu. */
-static Ball* new_ball(float xbr, float ybr, float rbr, int state);
+static Ball* new_ball(float *xbr, float *ybr, float rbr, int state);
 /* Funkcija koja inicijalizuje loptice. */
 static void init_balls();
 /* Funkcija koja crta strelu. */
@@ -76,6 +81,9 @@ static void draw_player();
 static void draw_background();
 /* Funkcija koja crta loptice. */
 static void draw_ball();
+/* Funkcija koja crta pravougaonik koji se smanjuje 
+   i predstavlja tajmer. */
+static void draw_timer();
 
 void display(void) {
 
@@ -136,24 +144,31 @@ void display(void) {
    
    /* Crtamo lopte. */        
    draw_ball();
+   
+   /* Crtamo igraca. */
+   draw_player();
+
+   /* Iskljucujemo svetlo da bismo mogli da crtamo strele, 
+      kao i pozadinu i tajmer. */
+
+   glDisable(GL_LIGHTING);
+
+   /* Crtamo strelu. */
+   if(arrow_animation){
+     draw_arrow();
+   }
+
+   /* Crtamo pozadinu. */
+   draw_background();   
   
+   /* Crtamo tajmer. */
+   draw_timer(); 
+
    /*Ako je pogodjen igrac, izlazimo iz programa. */
    if(hit_flag == 1){
       exit(1);
    }
-    
-   /* Crtamo igraca. */
-   draw_player();
-
-   /* Iskljucujemo svetlo da bismo mogli da crtamo strele */
-   glDisable(GL_LIGHTING);
-
-   /* Crtamo strelu. */
-   draw_arrow();
-    
-   /* Crtamo pozadinu. */
-   draw_background();   
- 
+   
    /* Postavlja se nova slika u prozor. */
    glutSwapBuffers(); 
 }
@@ -161,25 +176,23 @@ void display(void) {
 static void init_balls(){
    
    int i;
-   float xpos, ypos;
-    
    for (i = 0; i < MAX_BALLS; i++) {
 
      /* Lopticama dodeljujemo random pocetne x i y koordinate,
         kao i brzine. */
 
-     xpos = -0.5 + RAND_NUM() * 0.09 + 0.01;
-     ypos = -0.5 + RAND_NUM() * 0.09 + 0.01;
+     xpos[i] = -1.0 + RAND_NUM();
+     ypos[i] = -1.0 + RAND_NUM();
      vx[i] = RAND_NUM() * 0.03 + 0.01;
      vy[i] = RAND_NUM() * 0.06 + 0.05;
       
      /* Prva lopta ima najveci radius. */
      if(i == 0){
-        balls[i] = new_ball(xpos, ypos, big_radius, 1);
+        balls[i] = new_ball(&xpos[i], &ypos[i], big_radius, 1);
      }
      /* Sledece dve imaju manji. */
      if(i == 1 || i == 2){
-        balls[i] = new_ball(xpos, ypos, medium_radius, 0);
+        balls[i] = new_ball(&xpos[i], &ypos[i], medium_radius, 0);
      }
      /* Poslednje 4 imaju najmanji. */
      if(i > 2){
@@ -187,13 +200,14 @@ static void init_balls(){
      }
   }
 }
+
 static void draw_arrow(){
    
    glPushMatrix();
     glTranslatef(arrow_x, arrow_y, 0);
     glBegin(GL_LINES);
      glColor3f(0, 1, 1);
-     glVertex3f(arrow_x, arrow_y - 0.2, 0);
+     glVertex3f(arrow_x, arrow_y - 0.1, 0);
      glVertex3f(arrow_x, arrow_y, 0);
     glEnd();
    glPopMatrix();
@@ -225,6 +239,7 @@ static void draw_ball(){
            glPopMatrix();
         }  
      }
+
    glPopMatrix();
 }
 
@@ -234,16 +249,34 @@ static void draw_background(){
    glPushMatrix();
     glBegin(GL_QUADS);	
      glColor3f(1.0, 0.0, 0.2);
-     glVertex2f(-3.0, -3.0);  
-     glVertex2f(3.0, -3.0);
+     glVertex2f(-1.0, -0.9);  
+     glVertex2f(1.0, -0.9);
      glColor3f(0.1, 0.4, 1.0);
-     glVertex2f(3.0, 3.0);
-     glVertex2f(-3.0, 3.0);
+     glVertex2f(1.0, 1.0);
+     glVertex2f(-1.0, 1.0);
     glEnd();
-   glPopMatrix(); 
+   glPopMatrix();
 
 }
 
+static void draw_timer(){
+
+   /* Crtamo gradijentni pravougaonik koji ce predstavljati tajmer.
+      Njegova boja polako postaje crvena sto vreme vise odmice. */
+
+   glPushMatrix();
+    glBegin(GL_QUADS);
+    glTranslatef(timer_x,0, 0);
+     glColor3f(1.0, 0.7 + timer_x, 0.7 + timer_x);
+     glVertex2f(-0.98, -0.92);
+     glVertex2f(timer_x, -0.92);
+     glColor3f(0, 0, 0.7 + timer_x);
+     glVertex2f(timer_x, -0.98);
+     glVertex2f(-0.98, -0.98);
+    glEnd();
+   glPopMatrix();
+
+}
 static int hits(float *x, float *y, float *r){
 
    if((*x - player_x) * (*x - player_x) + 
@@ -264,7 +297,7 @@ static int success(float *xpos, float *ypos, float *r){
 }
 
 static void bounce(){
-
+   
    int i;
    for(i = 0; i < MAX_BALLS; i++){
        if(balls[i]->state == 1){
@@ -272,13 +305,13 @@ static void bounce(){
        /* Ubrzavamo loptice kojima je indikator
           za crtanje 1. */
 
-       balls[i]->x += vx[i] * 0.02;
-       balls[i]->y += vy[i] * 0.02;
+       balls[i]->x += vx[i] * 0.04;
+       balls[i]->y += vy[i] * 0.04;
    
        /* Granice za kretanje lopte. */
        ball_x_min = clip_area_x_left + balls[i]->r;
        ball_x_max = clip_area_x_right - balls[i]->r;
-       ball_y_min = clip_area_y_bottom + balls[i]->r;
+       ball_y_min = clip_area_y_bottom+0.1 + balls[i]->r;
        ball_y_max = clip_area_y_top/1.5 - balls[i]->r;
 
        /* Ponasanje lopti u zavisnosti od toga 
@@ -307,7 +340,19 @@ static void bounce(){
     //printf("Igrac pogodjen lopticom broj %d!\n", i);             
     } 
    }
+   
+   /* Smanjujemo x koordinatu pravougaonika koji predstavlja
+      tajmer. Kada dodje do granice, vreme je isteklo i 
+      izlazi se iz igre. */
 
+   timer_x -= timer_speed; 
+
+  /* + 0.02 zbog "ivice" pravougaonika. */
+
+   if(timer_x < clip_area_x_left + 0.02){  
+      printf("Igracu isteklo vreme za igru!\n");
+      exit(1);
+   }
    /* Forsira se ponovno iscrtavanje prozora. */
    glutPostRedisplay();
 }
@@ -315,24 +360,25 @@ static void bounce(){
 static void shoot(void){
 	
    /* Ako strela predje y granicu,
-      vracamo je dole i postaje neaktivna. */	
-   
+      vracamo je dole i postaje neaktivna.	
+      Vracamo je tacno "ispod" igraca. */
+
    if(arrow_y > clip_area_y_top){ 
-      arrow_y = clip_area_y_bottom;
+      arrow_y = clip_area_y_bottom + 0.6;
       arrow_animation = 0;
    }
 }
 
-static Ball* new_ball(float xbr, float ybr, float rbr, int state){
+static Ball* new_ball(float *xbr, float *ybr, float rbr, int state){
    
    /* Kreiramo novu loptu. */
    Ball* new_ball = (Ball*)malloc(sizeof(Ball));
-   
+    
    if(new_ball == NULL){
 	exit(EXIT_FAILURE);
    }
-   new_ball->x = xbr;
-   new_ball->y = ybr;
+   new_ball->x = *xbr;
+   new_ball->y = *ybr;
    new_ball->r = rbr;
    new_ball->state = state;
    return new_ball;
@@ -342,11 +388,10 @@ static void timer(int value)
 { 
    /* Povecava se y koordinata strele. */
    arrow_y += arrow_speed;
-  		
+
    /* Ispaljivanje strela. */
    shoot();
    
-
    /* Proverava se da li je postignut pogodak.
       U slucaju da je prva loptica pogodjena njen indikator
       za crtanje postavlja se na 0, dok se za sledece 
@@ -388,7 +433,7 @@ static void timer(int value)
  
   /* Postavlja se ponovo tajmer po potrebi. */
    if(arrow_animation){
-     glutTimerFunc(refresh, timer, 0);
+      glutTimerFunc(refresh, timer, 0);
   }
 	
 }
@@ -450,6 +495,11 @@ void reshape(int width, int height) {
    }
    
    gluOrtho2D(clip_area_x_left, clip_area_x_right, clip_area_y_bottom, clip_area_y_top);
+
+   /* Ne dozvoljavamo promene velicine prozora. */
+   /* Nisam sigurna koliko je ovo korektno, ali neka ostane za sad. */
+  
+   glutReshapeWindow(500, 500);
 
 }
 
