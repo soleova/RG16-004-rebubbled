@@ -33,7 +33,7 @@ static float arrow_y = -0.45;
 static float timer_x = 0.98;
 
 /* Brzina strele i "tajmera". */
-static float arrow_speed = 0.04; 
+static float arrow_speed = 0.05; 
 static float timer_speed = 0.0003;
 
 /* Brzine loptica. */
@@ -55,6 +55,7 @@ float ball_x_max, ball_x_min, ball_y_max, ball_y_min;
 float clip_area_x_left, clip_area_x_right, clip_area_y_bottom, clip_area_y_top;
 
 int refresh = 30;
+int score_value;
 
 /* Deklaracije callback funkcija */
 static void keyboard(unsigned char key, int x, int y);
@@ -90,6 +91,10 @@ static void draw_ball();
 /* Funkcija koja crta pravougaonik koji se smanjuje 
    i predstavlja tajmer. */
 static void draw_timer();
+/* Funkcija koja ispisuje poruke na ekranu. */
+static void print_text(char *text, float x, float y);
+/*Funkcija koja ispisuje trenutni rezultat na ekranu. */
+static void print_score_value(float x, float y);
 
 void display(void) {
 
@@ -97,7 +102,7 @@ void display(void) {
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
  
    glMatrixMode(GL_MODELVIEW);   
-   glLoadIdentity();           
+   glLoadIdentity();          
 
    /* Parametri svetla */
    GLfloat light_ambient[] = { 0, 0, 0, 1 };
@@ -142,6 +147,17 @@ void display(void) {
 
    /* Pozicionira se svetlo. */
    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+   
+   /* Ispisujemo tekst u gornjem levom cosku. */
+   print_text("Score: ", -0.95, 0.9);
+
+   /* Ispisujemo trenutni rezultat pored teksta. */
+   print_score_value(-0.7, 0.9);
+
+   /* Ako smo pogodili sve loptice, ispisujemo GAME OVER. */
+   if(score_value == 1200){
+     print_text("YOU WON!", -0.15, 0.0);
+   }
 
    glMaterialfv(GL_FRONT, GL_AMBIENT, no_material);
    glMaterialfv(GL_FRONT, GL_DIFFUSE, blue_material_diffuse);
@@ -188,7 +204,7 @@ void display(void) {
 
    /*Ako je pogodjen igrac, izlazimo iz programa. */
    if(hit_flag == 1){
-      exit(1);
+      exit(1);   
    }
    
    /* Postavlja se nova slika u prozor. */
@@ -281,7 +297,7 @@ static void draw_player_head(){
 static void draw_player_body(){
    
    glPushMatrix();
-    glTranslatef(player_x, player_y-0.05, 0);
+    glTranslatef(player_x, player_y - 0.05, 0);
     glRotatef(-90, 1, 0, 0);
     glutSolidCone(0.04, 0.1, 15, 15);
    glPopMatrix();
@@ -295,7 +311,7 @@ static void draw_ball(){
    
    int i;
    glPushMatrix();
-   for (i=0; i < MAX_BALLS; i++) {
+   for (i = 0; i < MAX_BALLS; i++) {
        if(balls[i]->state == 1){
            glPushMatrix();
             glTranslatef(balls[i]->x, balls[i]->y, 0);
@@ -354,7 +370,7 @@ static int hits(float *x, float *y, float *r){
 static int success(float *xpos, float *ypos, float *r){
    
    if((*xpos - player_x) * (*xpos - player_x) + 
-      (*ypos - arrow_y) * (*ypos - arrow_y) < 
+      (*ypos - arrow_y) * (*ypos - arrow_y) <=
       (*r) * (*r)){
 	   return 1;   
    }
@@ -425,12 +441,10 @@ static void bounce(){
 
 static void shoot(void){
 	
-   /* Ako strela predje y granicu,
-      vracamo je dole i postaje neaktivna.	
-      Vracamo je tacno "ispod" igraca. */
-
-   if(arrow_y > clip_area_y_top){ 
-      arrow_y = clip_area_y_bottom + 0.6;
+   /* Povecava se y koordinata strele. */
+   arrow_y += arrow_speed;
+   
+   if(arrow_y > clip_area_y_top){
       arrow_animation = 0;
    }
 }
@@ -447,14 +461,26 @@ static Ball* new_ball(float *xbr, float *ybr, float rbr, int state){
    new_ball->y = *ybr;
    new_ball->r = rbr;
    new_ball->state = state;
+ 
    return new_ball;
+}
+
+static void print_text(char *text, float x, float y) {
+
+   glRasterPos3f(x, y, 0);
+   glutBitmapString(GLUT_BITMAP_9_BY_15, text);
+}
+
+static void print_score_value(float x, float y){
+    
+   char buff[10];
+   snprintf(buff, 10, "%d", score_value);
+   glRasterPos3f(x, y, 0);
+   glutBitmapString(GLUT_BITMAP_8_BY_13, buff);
 }
 
 static void timer(int value)
 { 
-   /* Povecava se y koordinata strele. */
-   arrow_y += arrow_speed;
-
    /* Ispaljivanje strela. */
    shoot();
    
@@ -470,22 +496,27 @@ static void timer(int value)
             balls[p]->state = 0;        // Ako je pogodjena prva loptica,
             balls[p+1]->state = 1;      // treba da se pojave sledece dve manje.
             balls[p+2]->state = 1; 
+	    score_value += 100;
          }
          if(p == 1){                 
             balls[p]->state = 0;        // Ako je pogodjena prva manja loptica,
             balls[p+2]->state = 1;      // treba da ostane druga manja loptica i da
             balls[p+3]->state = 1;      // se pojave dve manje od prve. 
+ 	    score_value += 150;
          }
-         if(p == 2){                    // Ako je pogodjena druga manja loptica.
-            balls[p]->state = 0;        // treba da ostane prva manja loptica i da
-            balls[p+3]->state = 1;      // se pojave dve manje od druge.
-            balls[p+4]->state = 1;
+         if(p == 2){                    
+            balls[p]->state = 0;        // Ako je pogodjena druga manja loptica.
+            balls[p+3]->state = 1;      // treba da ostane prva manja loptica i da
+            balls[p+4]->state = 1;      // se pojave dve manje od druge.  
+            score_value += 150;
          }
-         if(p > 2){                     // Ako su pogodjene najmanje loptice, 
-            balls[p]->state = 0;        // ne crtamo nove loptice.
+         if(p > 2){                      
+            balls[p]->state = 0;        // Ako su pogodjene najmanje loptice,
+            score_value += 200;          // ne crtamo nove loptice.
          }
                 
          //printf("Pogodjena loptica broj %d!\n", p);
+          
      }
   }
  
@@ -506,22 +537,20 @@ static void keyboard(unsigned char key, int x, int y){
             /* Kretanje u desno sve dok ne dodjemo do granice. */
             if(player_x <= clip_area_x_right - 0.05){
             player_x += 0.02;
-	    } 
+     	    } 
 	    break;
    case 'a':
             /* Kretanje u levo sve dok ne dodjemo do granice. */
 	    if(player_x >= clip_area_x_left + 0.05){
-	    player_x -= 0.02;
+	    player_x -= 0.02;       
 	    } 
 	    break;
-   case 'f': 
-	    arrow_animation = 0;
- 
-            /* Nakon pucanja strele, postavljamo njenu x koordinatu
-	       na x koordinatu igraca, delimo sa 2 kako bi bila 
-               ispaljena sa "sredine" igraca. */
-	   
+   case 'f':
+            /* Nakon pucanja strele, postavljamo je "iza" igraca,
+               delimo sa 2 kako bi bila ispaljena sa "sredine" igraca. */
+	    
             arrow_x = player_x/2;
+            arrow_y = -0.35;
             if(animation_active){
           	glutTimerFunc(refresh, timer, 0);
 		arrow_animation = 1;
@@ -542,7 +571,7 @@ void reshape(int width, int height) {
  
    glMatrixMode(GL_PROJECTION);  
    glLoadIdentity();           
-   
+
    if (width >= height) {
        clip_area_x_left   = -1.0 * aspect;
        clip_area_x_right  = 1.0 * aspect;
