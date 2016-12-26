@@ -23,7 +23,10 @@ int hit_flag;
 
 /* Flegovi za animaciju. */
 static int animation_active;
+static int animation_parameter;
 static int arrow_animation;
+static int start_flag;
+static int pause_flag;
 
 /* Koordinate igraca, strele i "tajmera". */
 static float player_x = 0.0;
@@ -56,6 +59,7 @@ float clip_area_x_left, clip_area_x_right, clip_area_y_bottom, clip_area_y_top;
 
 int refresh = 30;
 int score_value;
+int num_balls_hit;
 
 /* Deklaracije callback funkcija */
 static void keyboard(unsigned char key, int x, int y);
@@ -66,7 +70,6 @@ static void timer(int value);
 /* Funkcija koja proverava granice odskakanja lopte. */
 static void bounce();
 /* Funkcija koja proverava granice strele. */
-
 static void shoot(void);
 /* Funkcija koja proverava da li je igrac pogodjen loptom. */
 static int hits(float *x, float *y, float *r);
@@ -148,17 +151,32 @@ void display(void) {
    /* Pozicionira se svetlo. */
    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
    
-   /* Ispisujemo tekst u gornjem levom cosku. */
-   print_text("Score: ", -0.95, 0.9);
-
-   /* Ispisujemo trenutni rezultat pored teksta. */
-   print_score_value(-0.7, 0.9);
-
-   /* Ako smo pogodili sve loptice, ispisujemo GAME OVER. */
-   if(score_value == 1200){
-     print_text("YOU WON!", -0.15, 0.0);
+   /* U slucaju da je start flag postavljen na 0, igrica jos uvek nije pokrenuta,
+      ispisujemo poruku "Press s to start." */
+   if(!start_flag){
+      print_text("Press s to start", -0.3, 0.8);
    }
+   /* Ako je igrica pauzirana, ispisujemo odgovarajuce poruke. */
+   else if(pause_flag){
+      print_text("Game paused", -0.2, 0.8);
+      print_text("Press r to resume", -0.3, 0.7);
+   }
+   /* Inace, ispisujemo ostalo. */
+   else{
+      /* Ispisujemo tekst u gornjem levom cosku. */
+      print_text("Score: ", -0.95, 0.9);
 
+      /* Ispisujemo trenutni rezultat pored teksta. */
+      print_score_value(-0.7, 0.9);
+
+      /* Kada pogodimo sve loptice, zaustavljamo igricu i 
+         ispisujemo poruku. */
+      if(num_balls_hit == MAX_BALLS){
+         animation_active = 0;
+         print_text("YOU WON!", -0.15, 0.0);
+      }
+   }
+ 
    glMaterialfv(GL_FRONT, GL_AMBIENT, no_material);
    glMaterialfv(GL_FRONT, GL_DIFFUSE, blue_material_diffuse);
    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
@@ -251,7 +269,7 @@ static void init_balls(){
 static void draw_arrow(){
    
    glPushMatrix();
-    glTranslatef(arrow_x, arrow_y, 0);
+    //glTranslatef(arrow_x, arrow_y, 0);
     glBegin(GL_LINES);
      glColor3f(0, 1, 1);
      glVertex3f(arrow_x - 0.015, arrow_y - 0.015, 0);
@@ -325,6 +343,7 @@ static void draw_ball(){
 static void draw_background(){
  
    /* Crtamo sarenu pozadinu. */
+   /* TO DO: iskoristiti animation_parameter za neko fino menjanje boje. */
    glPushMatrix();
     glBegin(GL_QUADS);	
      glColor3f(0.1, 0.4, 1.0);
@@ -369,7 +388,7 @@ static int hits(float *x, float *y, float *r){
 
 static int success(float *xpos, float *ypos, float *r){
    
-   if((*xpos - player_x) * (*xpos - player_x) + 
+   if((*xpos - arrow_x) * (*xpos - arrow_x) + 
       (*ypos - arrow_y) * (*ypos - arrow_y) <=
       (*r) * (*r)){
 	   return 1;   
@@ -378,7 +397,8 @@ static int success(float *xpos, float *ypos, float *r){
 }
 
 static void bounce(){
-   
+
+   if(animation_active){
    int i;
    for(i = 0; i < MAX_BALLS; i++){
        if(balls[i]->state == 1){
@@ -392,7 +412,7 @@ static void bounce(){
        /* Granice za kretanje lopte. */
        ball_x_min = clip_area_x_left + balls[i]->r;
        ball_x_max = clip_area_x_right - balls[i]->r;
-       ball_y_min = clip_area_y_bottom+0.1 + balls[i]->r;
+       ball_y_min = clip_area_y_bottom + 0.1 + balls[i]->r;
        ball_y_max = clip_area_y_top/1.5 - balls[i]->r;
 
        /* Ponasanje lopti u zavisnosti od toga 
@@ -434,9 +454,11 @@ static void bounce(){
       printf("Igracu isteklo vreme za igru!\n");
       exit(1);
    }
-
    /* Forsira se ponovno iscrtavanje prozora. */
    glutPostRedisplay();
+
+   animation_active = 1;
+}
 }
 
 static void shoot(void){
@@ -481,6 +503,10 @@ static void print_score_value(float x, float y){
 
 static void timer(int value)
 { 
+
+   /* Azurira se vreme simulacije. */
+    animation_parameter++;
+  
    /* Ispaljivanje strela. */
    shoot();
    
@@ -497,22 +523,26 @@ static void timer(int value)
             balls[p+1]->state = 1;      // treba da se pojave sledece dve manje.
             balls[p+2]->state = 1; 
 	    score_value += 100;
+            num_balls_hit++;
          }
          if(p == 1){                 
             balls[p]->state = 0;        // Ako je pogodjena prva manja loptica,
             balls[p+2]->state = 1;      // treba da ostane druga manja loptica i da
             balls[p+3]->state = 1;      // se pojave dve manje od prve. 
  	    score_value += 150;
+            num_balls_hit++;
          }
          if(p == 2){                    
             balls[p]->state = 0;        // Ako je pogodjena druga manja loptica.
             balls[p+3]->state = 1;      // treba da ostane prva manja loptica i da
             balls[p+4]->state = 1;      // se pojave dve manje od druge.  
             score_value += 150;
+            num_balls_hit++;
          }
          if(p > 2){                      
             balls[p]->state = 0;        // Ako su pogodjene najmanje loptice,
             score_value += 200;          // ne crtamo nove loptice.
+            num_balls_hit++;
          }
                 
          //printf("Pogodjena loptica broj %d!\n", p);
@@ -524,7 +554,7 @@ static void timer(int value)
    glutPostRedisplay();        
  
   /* Postavlja se ponovo tajmer po potrebi. */
-   if(arrow_animation){
+   if(arrow_animation && animation_active){
       glutTimerFunc(refresh, timer, 0);
   }
 	
@@ -533,31 +563,54 @@ static void timer(int value)
 static void keyboard(unsigned char key, int x, int y){
  
    switch(key){
+
+   case 's':
+   case 'r':
+            /* Pokrece se igrica pritiskom na taster s, start flag 
+               postavljamo na 1, da bismo znali da vise ne treba da
+               ispisujemo poruku "Press s to start", a pause_flag je 
+               sada postavljen na 0. 
+               U slucaju tastera r, igrica se pokrece nakon sto je
+               pauzirana. */ 
+            if (!animation_active) {
+                glutTimerFunc(10, timer, 0);
+                animation_active = 1;
+                start_flag = 1;
+                pause_flag = 0;
+            }
+            break;
+   case 'p':
+            /* Pauzira se igrica, pause flag postavljamo na 1 da bismo znali
+               da treba da ispisemo poruku "Game paused". */
+             animation_active = 0;
+             pause_flag = 1;
+             break;
    case 'd':
             /* Kretanje u desno sve dok ne dodjemo do granice. */
-            if(player_x <= clip_area_x_right - 0.05){
+            if(animation_active && player_x <= clip_area_x_right - 0.05){
             player_x += 0.02;
      	    } 
 	    break;
    case 'a':
             /* Kretanje u levo sve dok ne dodjemo do granice. */
-	    if(player_x >= clip_area_x_left + 0.05){
+	    if(animation_active && player_x >= clip_area_x_left + 0.05){
 	    player_x -= 0.02;       
 	    } 
 	    break;
    case 'f':
-            /* Nakon pucanja strele, postavljamo je "iza" igraca,
-               delimo sa 2 kako bi bila ispaljena sa "sredine" igraca. */
+            /* Postavljamo x koordinatu strele na x koordinatu igraca. */
 	    
-            arrow_x = player_x/2;
-            arrow_y = -0.35;
+            arrow_x = player_x;
+            arrow_y = -0.65;
             if(animation_active){
           	glutTimerFunc(refresh, timer, 0);
 		arrow_animation = 1;
 	    }          	
             break;
    case 27:
-	   exit(1);
+	   /* Zavrsava se program. */
+           exit(0);
+           break;
    }
 }
 
@@ -619,7 +672,10 @@ int main(int argc, char** argv) {
    glutReshapeFunc(reshape);   
    glutKeyboardFunc(keyboard);
    glutTimerFunc(0, timer, 0);  
-   animation_active = 1;
+   
+   /* Inicijalizuju se globalne promenljive. */
+    animation_parameter = 0;
+    animation_active = 0;
    
    /* Inicijalizacija pocetnih koordinata i brzina loptica. */
    init_values();
