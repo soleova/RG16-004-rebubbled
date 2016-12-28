@@ -1,23 +1,22 @@
-#include <GL/glut.h>  
+#include <GL/glut.h> 
 #include <math.h>     
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #define MAX_BALLS 14
-#define RAND_NUM() ((double)rand()/RAND_MAX)
 
 typedef struct BALL{
    float x, y, r;
    int state; /* State je indikator da li loptica treba da se crta. */ 
    char size; /* Large, medium ili small velicina. */
-   
+   float red;  
+   float green;
+   float blue;
 }Ball;
  
 const char title[] = "Rebbubled";  
 int window_width  = 500;   
 int window_height = 500;    
-int window_pos_x   = 50;      
-int window_pos_y   = 50;      
 
 /* Fleg za koliziju. */
 int hit_flag;
@@ -45,6 +44,9 @@ float vx[MAX_BALLS], vy[MAX_BALLS];
 
 /* Koordinate loptica. */
 float xpos[MAX_BALLS], ypos[MAX_BALLS];
+
+/* Boje loptica. */
+float red[MAX_BALLS], green[MAX_BALLS], blue[MAX_BALLS];
 
 /* Velicine precnika loptica. */
 static float big_radius = 0.12;
@@ -80,7 +82,7 @@ static int hits(float *x, float *y, float *r);
 /* Funkcija koja proverava da li je strela pogodila loptu.*/
 static int success(float *xpos, float *ypos, float *r);
 /* Funkcija koja pravi novu loptu. */
-static Ball* new_ball(float *xbr, float *ybr, float rbr, int state, char size);
+static Ball* new_ball(float *xbr, float *ybr, float rbr, int state, char size, float r, float g, float b);
 /* Funkcija koja inicijalizuje pocetne koordinate loptica i njihove brzine. */
 static void init_values();
 /* Funkcija koja inicijalizuje loptice. */
@@ -114,7 +116,7 @@ void display(void) {
  
    glMatrixMode(GL_MODELVIEW);   
    glLoadIdentity();          
-
+   
    init_light();
  
    /* Pozicija svetla. */
@@ -123,27 +125,11 @@ void display(void) {
    /* Nulti koeficijenti refleksije materijala. */
    GLfloat no_material[] = { 0, 0, 0, 1 };
 
-   /* Koeficijenti ambijentalne refleksije materijala. */
-   //GLfloat material_ambient[] = { 0.7, 0.7, 0.7, 1 };
-
-   /* Koeficijenti difuzne refleksije materijala. */
-   GLfloat blue_material_diffuse[] = { 0.1, 0.5, 0.8, 1 };
-
-   GLfloat red_material_diffuse[] = {1.0, 0.2, 0.1, 1}; 
-
-   GLfloat black_material_diffuse[] = {0.0, 0.0, 0.0, 1};
-
    /* Koeficijenti spekularne refleksije materijala. */
-   GLfloat material_specular[] = { 1, 1, 1, 1 };
+   GLfloat material_specular[] = { 0.8, 0.8, 0.8, 1 };
 
    /* Koeficijent spekularne refleksije za slucaj male vrednosti koeficijenta. */
-   GLfloat low_shininess[] = { 5 };
-
-   /* Koeficijent spekularne refleksije za slucaj velike vrednosti koeficijenta. */
-   GLfloat high_shininess[] = { 100 };
-
-   /* Emisiona boja materijala. */
-   //GLfloat material_emission[] = { 0.3, 0.2, 0.2, 0 };
+   GLfloat low_shininess[] = { 15 };
 
    /* Pozicionira se svetlo. */
    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
@@ -173,68 +159,51 @@ void display(void) {
          print_text("YOU WON!", -0.15, 0.0);
       }
    }
-    
+   
+   glEnable(GL_COLOR_MATERIAL);
+   
+   /* Postavljaju se parametri materijala. */
    glMaterialfv(GL_FRONT, GL_AMBIENT, no_material);
-   glMaterialfv(GL_FRONT, GL_DIFFUSE, blue_material_diffuse);
    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
    glMaterialfv(GL_FRONT, GL_SHININESS, low_shininess);
    glMaterialfv(GL_FRONT, GL_EMISSION, no_material); 
    
-   /* Crtamo lopte. */        
-   draw_ball();
- 
-   glMaterialfv(GL_FRONT, GL_AMBIENT, no_material);
-   glMaterialfv(GL_FRONT, GL_DIFFUSE, black_material_diffuse);
-   glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
-   glMaterialfv(GL_FRONT, GL_SHININESS, low_shininess);
-   glMaterialfv(GL_FRONT, GL_EMISSION, no_material);
+   draw_ball();  
    draw_player_horns();
- 
-   glMaterialfv(GL_FRONT, GL_AMBIENT, no_material);
-   glMaterialfv(GL_FRONT, GL_DIFFUSE, red_material_diffuse);
-   glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
-   glMaterialfv(GL_FRONT, GL_SHININESS, low_shininess);
-   glMaterialfv(GL_FRONT, GL_EMISSION, no_material); 
    draw_player_head();
-
-   glMaterialfv(GL_FRONT, GL_AMBIENT, no_material);
-   glMaterialfv(GL_FRONT, GL_DIFFUSE, black_material_diffuse);
-   glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
-   glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
-   glMaterialfv(GL_FRONT, GL_EMISSION, no_material); 
    draw_player_body();
 
    /* Iskljucujemo svetlo da bismo mogli da crtamo strele, 
-      kao i pozadinu i tajmer. */
-
+      kao i pozadinu i tajmer, iskljucujemo i materijal 
+      da nam ne bi menjao boju teksta. */
+   glDisable(GL_COLOR_MATERIAL);
    glDisable(GL_LIGHTING);
 
    if(arrow_animation){
      draw_arrow();
    }
-
+   
    draw_background();   
- 
    draw_timer(); 
 
-   /*Ako je pogodjen igrac, izlazimo iz programa. */
-  /* if(hit_flag == 1){
+   /* Ako je pogodjen igrac, izlazimo iz programa. */
+   if(hit_flag == 1){
       exit(1);   
-   }*/
+   }
    
    /* Postavlja se nova slika u prozor. */
    glutSwapBuffers(); 
 }
 
 static double randf(double min, double max){
-    return ((double)rand()/(RAND_MAX)) * abs(min - max) + min;
+    return ((double)rand()/(double)RAND_MAX) * (max-min) + min;
 }
 
 static void init_light(){
  
    /* Parametri svetla */
    GLfloat light_ambient[] = { 0, 0, 0, 1 };
-   GLfloat light_diffuse[] = { 1, 1, 0.9, 1 };
+   GLfloat light_diffuse[] = { 0.8, 1, 0.9, 1 };
    GLfloat light_specular[] = { 1, 1, 1, 1 };
    GLfloat model_ambient[] = { 0.4, 0.4, 0.4, 1 };
    
@@ -249,15 +218,17 @@ static void init_light(){
 
 static void init_values(){
     
-    /* Inicijalizujemo pocetne kordinate i brzine. */
+    /* Inicijalizujemo pocetne kordinate i brzine, kao i boje. */
    int i;
    for (i = 0; i < MAX_BALLS; i++) {
 
      xpos[i] = randf(-0.8, 0.8);
      ypos[i] = randf(-0.4, 0.7);
-     vx[i] = randf(0, 1) * 0.03 + 0.01;
-     vy[i] = randf(0, 1) * 0.07 + 0.05;
-     
+     vx[i] = randf(0.0, 1.0) * 0.03 + 0.01;
+     vy[i] = randf(0.0, 1.0) * 0.07 + 0.05;
+     red[i] = randf(0.2, 1.0);
+     green[i] = 0.5;
+     blue[i] = randf(0.5, 1.0);
    }
 }
 
@@ -277,15 +248,15 @@ static void init_balls(){
    
    /* Lopte sa velicinom large. */
      if(i == 0 || i == 7){
-        balls[i] = new_ball(&xpos[k], &ypos[k], big_radius, 1, 'l');
+        balls[i] = new_ball(&xpos[k], &ypos[k], big_radius, 1, 'l', red[k], green[k], blue[k]);
      }
      /* Lopte sa velicinom medium */
      if(i == 1 || i == 4 || i == 8 || i == 11){
-        balls[i] = new_ball(&xpos[k], &ypos[k], medium_radius, 0, 'm');
+        balls[i] = new_ball(&xpos[k], &ypos[k], medium_radius, 0, 'm',  red[k], green[k], blue[k]);
      }
      /* Lopte sa velicinom small */
      if(i == 2 || i == 3 || i == 5 || i == 6 || i == 9 || i == 10 || i == 12 || i == 13){
-        balls[i] = new_ball(&xpos[k], &ypos[k], small_radius, 0, 's');
+        balls[i] = new_ball(&xpos[k], &ypos[k], small_radius, 0, 's',  red[k], green[k], blue[k]);
      }
    }
 
@@ -315,6 +286,7 @@ static void draw_player_horns(){
     glTranslatef(player_x - 0.025, player_y + 0.072, 0);
     glRotatef(-90, 1, 0, 0);
     glRotatef(-32, 0, 1, 0);
+    glColor3f(0.0, 0.0, 0.0);
     glutSolidCone(0.025, 0.03, 15, 15);
    glPopMatrix();
 
@@ -323,6 +295,7 @@ static void draw_player_horns(){
     glTranslatef(player_x + 0.025, player_y + 0.072, 0);
     glRotatef(-90, 1, 0, 0);
     glRotatef(32, 0, 1, 0);
+    glColor3f(0.0, 0.0, 0.0);
     glutSolidCone(0.025, 0.03, 15, 15);
    glPopMatrix();
 
@@ -332,6 +305,7 @@ static void draw_player_head(){
    
    glPushMatrix();
     glTranslatef(player_x, player_y + 0.05, 0);
+    glColor3f(0.3, 0.0, 0.0);
     glutSolidSphere(0.04, 15, 15);
    glPopMatrix();
 
@@ -342,6 +316,7 @@ static void draw_player_body(){
    glPushMatrix();
     glTranslatef(player_x, player_y - 0.05, 0);
     glRotatef(-90, 1, 0, 0);
+    glColor3f(0.0, 0.0, 0.0);
     glutSolidCone(0.04, 0.1, 15, 15);
    glPopMatrix();
 
@@ -358,6 +333,7 @@ static void draw_ball(){
        if(balls[i]->state == 1){
            glPushMatrix();
             glTranslatef(balls[i]->x, balls[i]->y, 0);
+            glColor3f(balls[i]->red, balls[i]->green, balls[i]->blue);
             glutSolidSphere(balls[i]->r, 15, 15);
            glPopMatrix();
         }  
@@ -405,7 +381,7 @@ static void draw_timer(){
 }
 
 static int hits(float *x, float *y, float *r){
-
+   
    if((*x - player_x) * (*x - player_x) + 
       (*y - player_y) * (*y - player_y) <= 
       (*r) * (*r)){
@@ -465,8 +441,7 @@ static void bounce(){
    /* Proverava se da li je loptica udarila igraca. */
    
    if(hits(&balls[i]->x, &balls[i]->y, &balls[i]->r)){
-      hit_flag = 1;
-    //printf("Igrac pogodjen lopticom broj %d!\n", i);             
+      hit_flag = 1;            
     } 
    }
    
@@ -499,7 +474,7 @@ static void shoot(void){
    }
 }
 
-static Ball* new_ball(float *xbr, float *ybr, float rbr, int state, char size){
+static Ball* new_ball(float *xbr, float *ybr, float rbr, int state, char size, float r, float g, float b){
    
    /* Kreiramo novu loptu. */
    Ball* new_ball = (Ball*)malloc(sizeof(Ball));
@@ -512,6 +487,9 @@ static Ball* new_ball(float *xbr, float *ybr, float rbr, int state, char size){
    new_ball->r = rbr;
    new_ball->state = state;
    new_ball->size = size;
+   new_ball->red = r;
+   new_ball->green = g;
+   new_ball->blue = b;
  
    return new_ball;
 }
@@ -527,7 +505,7 @@ static void print_score_value(float x, float y){
    char buff[10];
    snprintf(buff, 10, "%d", score_value);
    glRasterPos3f(x, y, 0);
-   glutBitmapString(GLUT_BITMAP_8_BY_13, buff);
+   glutBitmapString(GLUT_BITMAP_9_BY_15, buff);
 }
 
 static void timer(int value)
@@ -556,7 +534,7 @@ static void timer(int value)
                num_balls_hit++;
             }                 
             if(balls[p]->size == 'm'){    // Ako je pogodjena medium lopta, onda se ona vise
-               balls[p]->state = 0;       // ne crta, a crtaju se dve medium loptice.
+               balls[p]->state = 0;       // ne crta, a crtaju se dve small loptice.
                balls[p+1]->state = 1;
                balls[p+2]->state = 1;  
  	       score_value += 150;
