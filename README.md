@@ -5,7 +5,10 @@ Kada se pogodi loptica, pojave se dve nove, manje loptice. Ako loptica pogodi ig
 ili mu istekne vreme, on gubi i izlazi se iz programa.
 
 Kontrola | Akcija
---- | --- |
+---- | ---- |
+s | start igre |
+p | pauziraj |
+r | nastavi |
 a | levo |
 d | desno |
 f | pucanje |
