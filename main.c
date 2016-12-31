@@ -2,12 +2,14 @@
 #include <math.h>     
 #include <stdio.h>
 #include <time.h>
-#define MAX_BALLS 14
+#include <GL/freeglut.h> /* Potrebno zbog funkcije glutBitmapString, da ne izbacuje upozorenje. */
+#define MAX_BALL_NUMBER 14
+#define REFRESH 30
 
 typedef struct BALL{
    float x, y, r;
-   int state; /* State je indikator da li loptica treba da se crta. */ 
-   char size; /* Large, medium ili small velicina. */
+   int state;            /* State je indikator da li loptica treba da se crta. */ 
+   char size;            /* Large, medium ili small velicina. */
    float red;  
    float green;
    float blue;
@@ -45,18 +47,18 @@ static float arrow_y = -0.45;
 static float timer_x = 0.98;
 
 /* Brzina strele, "tajmera" i magicne lopte. */
-static float arrow_speed = 0.05; 
+static float arrow_speed = 0.06; 
 static float timer_speed = 0.00035;
 static float magic_ball_speed = 0.005;
 
 /* Brzine loptica. */
-float vel_x[MAX_BALLS], vel_y[MAX_BALLS];
+float vel_x[MAX_BALL_NUMBER], vel_y[MAX_BALL_NUMBER];
 
 /* Koordinate loptica. */
-float x_pos[MAX_BALLS], y_pos[MAX_BALLS];
+float x_pos[MAX_BALL_NUMBER], y_pos[MAX_BALL_NUMBER];
 
 /* Boje loptica. */
-float red[MAX_BALLS], green[MAX_BALLS], blue[MAX_BALLS];
+float red[MAX_BALL_NUMBER], green[MAX_BALL_NUMBER], blue[MAX_BALL_NUMBER];
 
 /* Velicine precnika loptica. */
 static float big_radius = 0.12;
@@ -65,7 +67,7 @@ static float small_radius = 0.06;
 static float magic_ball_radius = 0.04;
 
 /* Niz loptica. */
-Ball* balls[MAX_BALLS];
+Ball* balls[MAX_BALL_NUMBER];
 
 /* Magicna lopta. */
 Magic* magic_ball;
@@ -80,8 +82,6 @@ float clip_area_y_top = 1;
 /* Rezultat i broj pogodjenih loptica. */
 int score_value;
 int num_balls_hit;
-
-int refresh = 30;
 
 /* Deklaracije callback funkcija */
 static void keyboard(unsigned char key, int x, int y);
@@ -137,6 +137,7 @@ void display(void) {
    glMatrixMode(GL_MODELVIEW);   
    glLoadIdentity();          
    
+   /* Inicijalizujemo osvetljenje. */
    init_light();
  
    /* Pozicija svetla. */
@@ -157,43 +158,53 @@ void display(void) {
    /* Pozicionira se svetlo. */
    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
    
+   /* Da bi nam pravilno bojio tekst. */
+   glDisable(GL_LIGHTING);
+   
    /* U slucaju da je start flag postavljen na 0, igrica jos uvek nije pokrenuta,
       ispisujemo poruku "Press s to start." */
    if(!start_flag){
+   
       print_text("Press s to start", -0.3, 0.8);
+   
    }
    /* Ako je igrica pauzirana, ispisujemo odgovarajuce poruke. */
    else if(pause_flag){
+      
       print_text("Game paused", -0.2, 0.8);
       print_text("Press r to resume", -0.3, 0.7);
+   
    }
    /* U slucaju da je igracu isteklo vreme, ispisuje mu se rezultat. */
    else if(game_over_flag){
+      
+      /* Ispisivacemo ovu poruku gore na sredini gde loptice ne mogu
+         da dosegnu, cisto da bi poruka bila pregledna u slucaju da imamo
+         jos loptica na ekranu. */
+  
       print_text("GAME OVER", -0.15, 0.8);
       print_text("YOUR SCORE: ", -0.3, 0.7);
       print_score_value(0.15, 0.7);
+   
    }
-   /* Inace ispisujemo samo rezultat. */
-   else{
-      /* Ispisujemo tekst u gornjem levom cosku. */
+   /* Kada pogodimo sve loptice, zavrsavamo igricu i ispisujemo poruku. */
+   else if(num_balls_hit == MAX_BALL_NUMBER){
+      
+      animation_active = 0;
+      print_text("YOU WON!", -0.1, 0.1);
+      print_text("YOUR SCORE: ", -0.3, -0.1);
+      print_score_value(0.15, -0.1);
+   
+   }
+   /* Dok igra tece ispisujemo rezultat u gornjem levom cosku. */
+   else {
+     
       print_text("Score: ", -0.95, 0.9);
-
-      /* Ispisujemo trenutni rezultat pored teksta. */
       print_score_value(-0.7, 0.9);
 
-      /* Kada pogodimo sve loptice, zaustavljamo igricu i 
-         ispisujemo poruku. */
-      if(num_balls_hit == MAX_BALLS){
-         if(magic_ball->state == 1){
-            magic_ball->state = 0;
-         }
-         animation_active = 0;
-         print_text("YOU WON!", -0.15, 0.0);
-         print_text("YOUR SCORE: ", -0.3, -0.1);
-         print_score_value(0.1, -0.1);
-      }
    }
-   
+
+   glEnable(GL_LIGHTING);
    glEnable(GL_COLOR_MATERIAL);
    
    /* Postavljaju se parametri materijala. */
@@ -201,9 +212,8 @@ void display(void) {
    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
    glMaterialfv(GL_FRONT, GL_SHININESS, low_shininess);
    glMaterialfv(GL_FRONT, GL_EMISSION, no_material); 
-   
-   glShadeModel(GL_SMOOTH);
 
+   /* Crtamo loptice i igraca. */
    draw_ball();
    draw_player_horns();
    draw_player_head();
@@ -211,10 +221,7 @@ void display(void) {
    draw_magic_ball();
    
    /* Iskljucujemo svetlo da bismo mogli da crtamo strele, 
-      kao i pozadinu i tajmer, iskljucujemo i materijal 
-      da nam ne bi menjao boju teksta. */
-   
-   glDisable(GL_COLOR_MATERIAL);
+      kao i pozadinu i tajmer. */
    glDisable(GL_LIGHTING);
 
    if(arrow_animation){
@@ -252,10 +259,10 @@ static void init_light(){
 
 static void init_values(){
     
-    /* Inicijalizujemo pocetne kordinate i brzine, kao i boje. */
+   /* Inicijalizujemo pocetne kordinate i brzine, kao i boje. */
    int i;
-   for (i = 0; i < MAX_BALLS; i++) {
-       x_pos[i] = randf(-0.9, 0.8);
+   for (i = 0; i < MAX_BALL_NUMBER; i++) {
+       x_pos[i] = randf(-0.85, 0.85);
        y_pos[i] = randf(-0.3, 0.7);
        vel_x[i] = randf(0.0, 1.0) * 0.03 + 0.01;
        vel_y[i] = randf(0.0, 1.0) * 0.07 + 0.05;
@@ -276,7 +283,7 @@ static void init_balls(){
       l m s s m s s l m s  s  m  s  s */
 
    int i, k;
-   for(i = 0, k = 0; i < MAX_BALLS; i++, k++){
+   for(i = 0, k = 0; i < MAX_BALL_NUMBER; i++, k++){
    
    /* Lopte sa velicinom large. */
      if(i == 0 || i == 7){
@@ -291,13 +298,13 @@ static void init_balls(){
         balls[i] = new_ball(&x_pos[k], &y_pos[k], small_radius, 0, 's',  red[k], green[k], blue[k]);
      }
    }
-
 }
 
 static void draw_arrow(){
    
    /* Podebljavamo strelicu. */
    glEnable(GL_LINE_SMOOTH);
+   
    glPushMatrix();
      glBegin(GL_LINES);
      glColor3f(0, 1, 1);
@@ -309,27 +316,29 @@ static void draw_arrow(){
      glVertex3f(arrow_x, arrow_y, 0);
     glEnd();
    glPopMatrix();
+   
    glDisable(GL_LINE_SMOOTH);
+
 }
 
 static void draw_player_horns(){
    
    /* Crtamo levi rog. */
    glPushMatrix();
-    glTranslatef(player_x - 0.025, player_y + 0.072, 0);
-    glRotatef(-90, 1, 0, 0);
-    glRotatef(-35, 0, 1, 0);
-    glColor3f(0.0, 0.0, 0.0);
-    glutSolidCone(0.025, 0.035, 15, 15);
+     glTranslatef(player_x - 0.025, player_y + 0.072, 0);
+     glRotatef(-90, 1, 0, 0);
+     glRotatef(-35, 0, 1, 0);
+     glColor3f(0.0, 0.0, 0.0);
+     glutSolidCone(0.025, 0.035, 15, 15);
    glPopMatrix();
 
    /* Crtamo desni rog. */
    glPushMatrix();
-    glTranslatef(player_x + 0.025, player_y + 0.072, 0);
-    glRotatef(-90, 1, 0, 0);
-    glRotatef(35, 0, 1, 0);
-    glColor3f(0.0, 0.0, 0.0);
-    glutSolidCone(0.025, 0.035, 15, 15);
+     glTranslatef(player_x + 0.025, player_y + 0.072, 0);
+     glRotatef(-90, 1, 0, 0);
+     glRotatef(35, 0, 1, 0);
+     glColor3f(0.0, 0.0, 0.0);
+     glutSolidCone(0.025, 0.035, 15, 15);
    glPopMatrix();
 
 }
@@ -337,9 +346,9 @@ static void draw_player_horns(){
 static void draw_player_head(){
    
    glPushMatrix();
-    glTranslatef(player_x, player_y + 0.05, 0);
-    glColor3f(0.3, 0.0, 0.0);
-    glutSolidSphere(0.04, 15, 15);
+     glTranslatef(player_x, player_y + 0.05, 0);
+     glColor3f(0.3, 0.0, 0.0);
+     glutSolidSphere(0.04, 15, 15);
    glPopMatrix();
 
 }
@@ -347,10 +356,10 @@ static void draw_player_head(){
 static void draw_player_body(){
    
    glPushMatrix();
-    glTranslatef(player_x, player_y - 0.05, 0);
-    glRotatef(-90, 1, 0, 0);
-    glColor3f(0.0, 0.0, 0.0);
-    glutSolidCone(0.04, 0.1, 15, 15);
+     glTranslatef(player_x, player_y - 0.05, 0);
+     glRotatef(-90, 1, 0, 0);
+     glColor3f(0.0, 0.0, 0.0);
+     glutSolidCone(0.04, 0.1, 15, 15);
    glPopMatrix();
 
 }
@@ -361,12 +370,13 @@ static void draw_ball(){
       Inicijalno, samo je prvoj lopti indikator 1. */
    
    int i;
-   for (i = 0; i < MAX_BALLS; i++) {
+  
+   for (i = 0; i < MAX_BALL_NUMBER; i++) {
        if(balls[i]->state == 1){
            glPushMatrix();
-            glTranslatef(balls[i]->x, balls[i]->y, 0);
-            glColor3f(balls[i]->red, balls[i]->green, balls[i]->blue);
-            glutSolidSphere(balls[i]->r, 15, 15);
+             glTranslatef(balls[i]->x, balls[i]->y, 0);
+             glColor3f(balls[i]->red, balls[i]->green, balls[i]->blue);
+             glutSolidSphere(balls[i]->r, 15, 15);
            glPopMatrix();
        }  
    }
@@ -380,13 +390,14 @@ static void draw_magic_ball(){
 
    if(magic_ball->state == 1){
       glPushMatrix();
-       glTranslatef(magic_ball->x, magic_ball->y, 0);
-       glRotatef(-90, 1, 0, 0);
-       glColor3f(r, g, b);
-       if(game_over_flag){          // Da bi loptica prestala da menja boje kad se igra zavrsi.
-          glColor3f(0.3, 0.5, 0.8);  
-       }
-       glutWireSphere(magic_ball->r, 15, 15);
+        glTranslatef(magic_ball->x, magic_ball->y, 0);
+        glRotatef(-90, 1, 0, 0);
+        glColor3f(r, g, b);
+        /* Da bi loptica prestala da menja boje kad se igra zavrsi. */
+        if(game_over_flag || num_balls_hit == MAX_BALL_NUMBER){         
+           glColor3f(0.3, 0.5, 0.8);  
+        }
+        glutWireSphere(magic_ball->r, 15, 15);
       glPopMatrix();
    } 
 }
@@ -395,16 +406,16 @@ static void draw_background(){
  
    /* Crtamo sarenu pozadinu. */
    glPushMatrix();
-    glBegin(GL_QUADS);	
-     glColor3f(0.1, 0.4, 0.3);
-     glVertex2f(-1.0, -0.9);
-     glColor3f(1.0, 0.2, 0.5);  
-     glVertex2f(1.0, -0.9);
-     glColor3f(0.1, 0.7, 1.0);
-     glVertex2f(1.0, 1.0);
-     glColor3f(0.4, 0.9, 0.7);
-     glVertex2f(-1.0, 1.0);
-    glEnd();
+     glBegin(GL_QUADS);	
+       glColor3f(0.1, 0.4, 0.3);
+       glVertex2f(-1.0, -0.9);
+       glColor3f(1.0, 0.2, 0.5);  
+       glVertex2f(1.0, -0.9);
+       glColor3f(0.1, 0.7, 1.0);
+       glVertex2f(1.0, 1.0);
+       glColor3f(0.4, 0.9, 0.7);
+       glVertex2f(-1.0, 1.0);
+     glEnd();
    glPopMatrix();
 
 }
@@ -415,35 +426,37 @@ static void draw_timer(){
       Njegova boja polako postaje crvena sto vreme vise odmice. */
 
    glPushMatrix();
-    glBegin(GL_QUADS);
-    glTranslatef(timer_x,0, 0);
-     glColor3f(1.0, 0.3 + timer_x, 0.2 + timer_x);
-     glVertex2f(-0.98, -0.92);
-     glVertex2f(timer_x, -0.92);
-     glColor3f(0, 0,  0.2 + timer_x);
-     glVertex2f(timer_x, -0.98);
-     glVertex2f(-0.98, -0.98);
-    glEnd();
+     glBegin(GL_QUADS);
+       glTranslatef(timer_x, 0.0, 0.0);
+       glColor3f(1.0, 0.3 + timer_x, 0.2 + timer_x);
+       glVertex2f(-0.98, -0.92);
+       glVertex2f(timer_x, -0.92);
+       glColor3f(0.0, 0.0,  0.2 + timer_x);
+       glVertex2f(timer_x, -0.98);
+       glVertex2f(-0.98, -0.98);
+     glEnd();
    glPopMatrix();
 
 }
 
 static int success(float *xpos, float *ypos, float *r){
+   
    /* U slucaju da je vrh strele pogodio loptu, racunamo pogodak.*/
-   if((*xpos - arrow_x) * (*xpos - arrow_x) + 
-      (*ypos - arrow_y) * (*ypos - arrow_y) <=
-      (*r) * (*r)){
-	   return 1;   
+
+   if(pow(*xpos - arrow_x, 2) + pow(*ypos - arrow_y, 2) <= pow(*r, 2)){
+      return 1;   
    }
    else return 0;
 }
 
 static int hits(float *x, float *y, float *r){
-   /* Na slican nacin racunamo i da li je loptica pogodila igraca. */
-   if((*x - player_x) * (*x - player_x) + 
-      (*y - player_y) * (*y - player_y) <= 
-      (*r) * (*r)){
-	   return 1;
+   
+   /* Na slican nacin racunamo i da li je loptica pogodila igraca.
+      Ovako ce se u koliziju racunati samo bas "direktan" pogodak
+      u vrh tela, ne u slucaju da ga lopta malo zakaci. */
+ 
+   if(pow(*x - player_x, 2) + pow(*y - player_y, 2) <= pow(*r, 2)){
+      return 1;   
    }
    else return 0;
 }
@@ -452,38 +465,41 @@ static void bounce(){
 
    if(animation_active){
    int i;
-   for(i = 0; i < MAX_BALLS; i++){
+   
+   for(i = 0; i < MAX_BALL_NUMBER; i++){
        if(balls[i]->state == 1){
    
        /* Ubrzavamo loptice kojima je indikator
           za crtanje 1. */
 
-       balls[i]->x += vel_x[i] * 0.04;
+       balls[i]->x += vel_x[i] * 0.03;
        balls[i]->y += vel_y[i] * 0.04;
    
        /* Granice za kretanje lopte. */
        ball_x_min = clip_area_x_left + balls[i]->r;
        ball_x_max = clip_area_x_right - balls[i]->r;
-       ball_y_min = clip_area_y_bottom + 0.1 + balls[i]->r;
-       ball_y_max = clip_area_y_top/1.5 - balls[i]->r;
+       ball_y_min = clip_area_y_bottom + 0.1 + balls[i]->r; /* + 0.1 zbog tajmera na dnu. */
+       ball_y_max = clip_area_y_top/1.5 - balls[i]->r;  /* Da loptice ne bi skakale do vrha. */
 
        /* Ponasanje lopti u zavisnosti od toga 
           da li su udarile u zid.*/
 
-       if (balls[i]->x > ball_x_max) {
-           balls[i]->x = ball_x_max;
-           vel_x[i] = -vel_x[i];
-       } else if (balls[i]->x < ball_x_min) {
-           balls[i]->x = ball_x_min;
-           vel_x[i]= -vel_x[i];
-         }
-       if (balls[i]->y > ball_y_max) {
-           balls[i]->y = ball_y_max;
-           vel_y[i] = -vel_y[i];
-       } else if (balls[i]->y  < ball_y_min) {
-           balls[i]->y  = ball_y_min;
-           vel_y[i] = -vel_y[i];
-         }
+       if(balls[i]->x > ball_x_max){
+          balls[i]->x = ball_x_max;
+          vel_x[i] = -vel_x[i];
+       } 
+       else if(balls[i]->x < ball_x_min){
+          balls[i]->x = ball_x_min;
+          vel_x[i]= -vel_x[i];
+       }
+       if(balls[i]->y > ball_y_max){
+          balls[i]->y = ball_y_max;
+          vel_y[i] = -vel_y[i];
+       } 
+       else if(balls[i]->y  < ball_y_min){
+          balls[i]->y  = ball_y_min;
+          vel_y[i] = -vel_y[i];
+       }
    }
 
    /* Proverava se da li je loptica udarila igraca. */
@@ -495,8 +511,7 @@ static void bounce(){
    /* Ako je indikator za crtanje magicne lopte 1, pustamo je
       da pada. U slucaju da je igrac ne uhvati, a ona dodje do
       tajmera, vise je ne crtamo, a kada je igrac uhvati, 
-      takodje se vise ne crta, ali mu uvecava rezultat za 1000 
-      poena. */
+      ona nestaje i uvecava mu rezultat za 1000 poena. */
 
    if(magic_ball->state == 1){
       magic_ball->y -= magic_ball_speed;
@@ -505,10 +520,10 @@ static void bounce(){
          magic_ball->state = 0;
       }
       if(hits(&magic_ball->x, &magic_ball->y, &magic_ball->r)){
-              magic_ball->state = 0;
-              score_value += 1000;
+         magic_ball->state = 0;
+         score_value += 1000;
       }
-    }
+   }
     
    /* Smanjujemo x koordinatu pravougaonika koji predstavlja
       tajmer. */
@@ -521,12 +536,12 @@ static void bounce(){
   }
    
   /* U slucaju da je tajmer istekao ili je igrac pogodjen, 
-     igra se zavrsava. *
-   + 0.02 zbog "ivice" pravougaonika. */
+     igra se zavrsava. 
+     + 0.02 zbog "ivice" pravougaonika. */
   if(timer_x < clip_area_x_left + 0.02 || hit_flag){
-      animation_active = 0;
-      game_over_flag = 1;
-   }
+     animation_active = 0;
+     game_over_flag = 1;
+  }
 }
 
 static void shoot(void){
@@ -545,9 +560,10 @@ static Ball* new_ball(float *xbr, float *ybr, float rbr, int state, char size, f
    /* Kreiramo novu loptu. */
    Ball* new_ball = (Ball*)malloc(sizeof(Ball));
     
-   if(new_ball == NULL){
-	exit(EXIT_FAILURE);
+   if(new_ball == NULL){ 
+      exit(EXIT_FAILURE);
    }
+
    new_ball->x = *xbr;
    new_ball->y = *ybr;
    new_ball->r = rbr;
@@ -566,8 +582,9 @@ static Magic* new_magic_ball(float xbr, float ybr, float rbr, int state){
    Magic* new_magic_ball = (Magic*)malloc(sizeof(Magic));
     
    if(new_magic_ball == NULL){
-	exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
    }
+
    new_magic_ball->x = xbr;
    new_magic_ball->y = ybr;
    new_magic_ball->r = rbr;
@@ -579,11 +596,10 @@ static Magic* new_magic_ball(float xbr, float ybr, float rbr, int state){
 static void print_text(char *text, float x, float y) {
    
    /* Na prosledjenoj poziciji ispisivace nam se string. */
+   glColor3f(0.0, 0.0, 0.8);
    glRasterPos3f(x, y, 0);
-   glutBitmapString(GLUT_BITMAP_9_BY_15, text);
+   glutBitmapString((void*) GLUT_BITMAP_9_BY_15, (const unsigned char*) text);
 
-   /* Pri kompajliranju izbacuje warning za implicitnu deklaraciju
-      funkcije glutBitmapString, ali funkcionise. */
 }
 
 static void print_score_value(float x, float y){
@@ -591,8 +607,10 @@ static void print_score_value(float x, float y){
    /* Rezultat prebacujemo u bafer koji cemo ispisivati. */
    char buff[10];
    snprintf(buff, 10, "%d", score_value);
+   glColor3f(0.4, 0.0, 0.6);
    glRasterPos3f(x, y, 0);
-   glutBitmapString(GLUT_BITMAP_HELVETICA_12, buff);
+   glutBitmapString((void*) GLUT_BITMAP_HELVETICA_18, (const unsigned char*) buff);
+
 }
 
 static void timer(int value)
@@ -607,57 +625,65 @@ static void timer(int value)
       loptice koje treba da se crtaju postavlja na 1. */
 
    int p;
-   for(p = 0; p < MAX_BALLS; p++){
-      if(success(&balls[p]->x, &balls[p]->y, &balls[p]->r) && balls[p]->state == 1) {
+    
+   for(p = 0; p < MAX_BALL_NUMBER; p++){
+       if(success(&balls[p]->x, &balls[p]->y, &balls[p]->r) && balls[p]->state == 1) {
             
-            if(balls[p]->size == 'l'){      // Ako je pogodjena large lopta, onda se ona vise
-               balls[p]->state = 0;         // ne crta, a crtaju se dve medium loptice. 
-               balls[p+1]->state = 1;      
-               balls[p+4]->state = 1;
-	       score_value += 100;      
-               num_balls_hit++;         
-            }                 
+          if(balls[p]->size == 'l'){             // Ako je pogodjena large lopta, onda se ona vise
+             balls[p]->state = 0;                // ne crta, a crtaju se dve medium loptice. 
+             balls[p+1]->state = 1;      
+             balls[p+4]->state = 1;
+	     score_value += 100;      
+             num_balls_hit++;         
+          }                 
 
-            /* Magicna loptica moze da se pojavi kada se gadjaju medium i small lopte,
-               da se ne bi pojavljivala uvek, stavljena je provera parnosti indeksa i u 
-               zavisnosti od njega crtace se magicna loptica sa pocetnom pozicijom istom
-               kao i loptica koja upravo pogodjena. */
-            
-            if(balls[p]->size == 'm'){      // Ako je pogodjena medium lopta, onda se ona vise
-               balls[p]->state = 0;         // ne crta, a crtaju se dve small loptice.
-               balls[p+1]->state = 1;
-               balls[p+2]->state = 1;  
- 	       score_value += 150;
-               num_balls_hit++;
+          /* Magicna loptica moze da se pojavi kada se gadjaju medium i small lopte,
+             da se ne bi pojavljivala uvek, stavljena je provera parnosti indeksa i u 
+             zavisnosti od njega crtace se magicna loptica sa pocetnom pozicijom istom
+             kao i loptica koja upravo pogodjena. */
+           
+          if(balls[p]->size == 'm'){             // Ako je pogodjena medium lopta, onda se ona vise
+             balls[p]->state = 0;                // ne crta, a crtaju se dve small loptice.
+             balls[p+1]->state = 1;
+             balls[p+2]->state = 1;  
+ 	     score_value += 150;
+             num_balls_hit++;
   
-               if(p % 2 == 0){              
-               magic_ball->state = 1;       
-               magic_ball->x = balls[p]->x; 
-               magic_ball->y = balls[p]->y;
-               }
-            }
-            if(balls[p]->size == 's'){    
-               balls[p]->state = 0;        
-               score_value += 200;         
-               num_balls_hit++;
-               
-              if(p % 2 != 0){             
-               magic_ball->state = 1;      
-               magic_ball->x = balls[p]->x;
-               magic_ball->y = balls[p]->y; 
-               } 
-      }
-         /* Strela prestaje da se crta onda kada pogodi lopticu. */
-         arrow_animation = 0;
-     }
-}
+             if(p % 2 == 0){ 
+                if(magic_ball->state == 0){      // Proveravamo da li se mozda magicna lopta vec pojavila,            
+                   magic_ball->state = 1;        // u tom slucaju necemo crtati novu, ali ako se trenutno 
+                   magic_ball->x = balls[p]->x;  // ne iscrtava, onda cemo je crtati.
+                   magic_ball->y = balls[p]->y;
+                }
+             }
+          }
+ 
+          if(balls[p]->size == 's'){    
+             balls[p]->state = 0;        
+             score_value += 200;         
+             num_balls_hit++;
+                
+             if(p % 2 != 0){
+                if(magic_ball->state == 0){       // Slicna provera za crtanje magicne loptice i ovde.        
+                   magic_ball->state = 1;      
+                   magic_ball->x = balls[p]->x;
+                   magic_ball->y = balls[p]->y; 
+                } 
+             }
+          }
+         
+          /* Strela prestaje da se crta onda kada pogodi lopticu. */
+          arrow_animation = 0;
+       }
+   }
+   
    /* Forsira se ponovno iscrtavanje prozora. */
    glutPostRedisplay();        
  
   /* Postavlja se ponovo tajmer po potrebi. */
    if(arrow_animation && animation_active){
-      glutTimerFunc(refresh, timer, 0);
-  }
+      glutTimerFunc(REFRESH, timer, 0);
+   }
 }
 
 static void keyboard(unsigned char key, int x, int y){
@@ -689,27 +715,33 @@ static void keyboard(unsigned char key, int x, int y){
             
             /* Kretanje u desno sve dok ne dodjemo do granice. */
             if(animation_active && player_x <= clip_area_x_right - 0.05){
-            player_x += 0.03;
+               player_x += 0.03;
      	    } 
 	    break;
    case 'a':
             /* Kretanje u levo sve dok ne dodjemo do granice. */
 	    if(animation_active && player_x >= clip_area_x_left + 0.05){
-	    player_x -= 0.03;       
+	       player_x -= 0.03;       
 	    } 
 	    break;
    case 'f':
-            /* Postavljamo x koordinatu strele na x koordinatu igraca. */
-	    
-            arrow_x = player_x;
-            arrow_y = -0.65;
-            if(animation_active){
-          	glutTimerFunc(refresh, timer, 0);
-		arrow_animation = 1;
-	    }          	
+            /* Ova provera sprecava igraca da spamuje sa pucanjem.
+               Kao i u originalnoj igrici, ako igrac promasi loptice,
+               mora da saceka da strela dodje do vrha ekrana, pa tek
+               onda moze opet da puca. */
+  
+            if(!arrow_animation){
+               /* Postavljamo x koordinatu strele na x koordinatu igraca. */
+               arrow_x = player_x;
+               arrow_y = -0.65;
+               if(animation_active){
+          	  glutTimerFunc(REFRESH, timer, 0);
+		  arrow_animation = 1;
+	       }          	
+            }
             break;
    case 27:
-	   /* Zavrsava se program. */
+	   /* Izlazi se iz igrice. */
            exit(0);
            break;
    }
@@ -748,7 +780,7 @@ int main(int argc, char** argv) {
 
    /* OpenGL inicijalizacija. */
    glClearColor (0.0, 0.0, 0.0, 0.0); 
-    glEnable(GL_DEPTH_TEST);
+   glEnable(GL_DEPTH_TEST);
    
    /* Registrovanje funkcija za obradu dogadjaja */
    glutDisplayFunc(display);    
