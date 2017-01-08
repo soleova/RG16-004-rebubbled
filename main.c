@@ -38,6 +38,7 @@ static int arrow_animation;
 static int start_flag;
 static int pause_flag;
 static int game_over_flag;
+static int win_flag;
 
 /* Koordinate igraca, strele, "tajmera" i magicne lopte.  */
 static float player_x = 0.0;
@@ -181,21 +182,21 @@ void display(void) {
       /* Ispisivacemo ovu poruku gore na sredini gde loptice ne mogu
          da dosegnu, cisto da bi poruka bila pregledna u slucaju da imamo
          jos loptica na ekranu. */
-  
+   
       print_text("GAME OVER", -0.15, 0.8);
       print_text("YOUR SCORE: ", -0.3, 0.7);
       print_score_value(0.15, 0.7);
    
    }
    /* Kada pogodimo sve loptice, zavrsavamo igricu i ispisujemo poruku. */
-   else if(num_balls_hit == MAX_BALL_NUMBER){
+   else if(win_flag){
       
-      animation_active = 0;
       print_text("YOU WON!", -0.1, 0.1);
       print_text("YOUR SCORE: ", -0.3, -0.1);
       print_score_value(0.15, -0.1);
    
    }
+ 
    /* Dok igra tece ispisujemo rezultat u gornjem levom cosku. */
    else {
      
@@ -367,10 +368,10 @@ static void draw_player_body(){
 static void draw_ball(){
 
    /* Crtamo samo one lopte kojima je indikator za crtanje 1.
-      Inicijalno, samo je prvoj lopti indikator 1. */
+      Inicijalno, samo je najvecim loptama indikator 1. */
    
    int i;
-  
+   
    for (i = 0; i < MAX_BALL_NUMBER; i++) {
        if(balls[i]->state == 1){
            glPushMatrix();
@@ -478,8 +479,8 @@ static void bounce(){
        /* Granice za kretanje lopte. */
        ball_x_min = clip_area_x_left + balls[i]->r;
        ball_x_max = clip_area_x_right - balls[i]->r;
-       ball_y_min = clip_area_y_bottom + 0.1 + balls[i]->r; /* + 0.1 zbog tajmera na dnu. */
-       ball_y_max = clip_area_y_top/1.5 - balls[i]->r;  /* Da loptice ne bi skakale do vrha. */
+       ball_y_min = clip_area_y_bottom + 0.1 + balls[i]->r;  /* + 0.1 zbog tajmera na dnu. */
+       ball_y_max = clip_area_y_top / 1.5 - balls[i]->r;     /* Da loptice ne bi skakale do vrha. */
 
        /* Ponasanje lopti u zavisnosti od toga 
           da li su udarile u zid.*/
@@ -528,7 +529,7 @@ static void bounce(){
    /* Smanjujemo x koordinatu pravougaonika koji predstavlja
       tajmer. */
    timer_x -= timer_speed; 
-
+  
    /* Forsira se ponovno iscrtavanje prozora. */
    glutPostRedisplay();
 
@@ -538,10 +539,19 @@ static void bounce(){
   /* U slucaju da je tajmer istekao ili je igrac pogodjen, 
      igra se zavrsava. 
      + 0.02 zbog "ivice" pravougaonika. */
-  if(timer_x < clip_area_x_left + 0.02 || hit_flag){
-     animation_active = 0;
-     game_over_flag = 1;
+  if((timer_x < clip_area_x_left + 0.02 || hit_flag) && num_balls_hit != MAX_BALL_NUMBER){
+      animation_active = 0;
+      game_over_flag = 1;
   }
+  
+  /* U slucaju da nam je ostalo jos vremena, a pogodili smo sve loptice,
+      dobicemo bonus poene u zavisnosti od preostalog vremena. */
+  if(num_balls_hit == MAX_BALL_NUMBER && timer_x > clip_area_x_left + 0.02){
+      timer_x -= 2 * timer_speed;
+      score_value += 3;
+      win_flag = 1;
+      animation_active = 0;
+   }
 }
 
 static void shoot(void){
@@ -664,7 +674,11 @@ static void timer(int value)
              num_balls_hit++;
                 
              if(p % 2 != 0){
-                if(magic_ball->state == 0){       // Slicna provera za crtanje magicne loptice i ovde.        
+                /* Slicna provera za crtanje magicne loptice i ovde. Samo je dodat uslov da je broj
+                   pogodjenih loptica manji od maksimalnog, da nam se magicna loptica ne bi pojavila
+                   kada pogodimo i poslednju loptu i da ne bi ostala "zamrznuta" kad se igra zavrsi. */
+  
+                if(magic_ball->state == 0 && num_balls_hit < MAX_BALL_NUMBER){        
                    magic_ball->state = 1;      
                    magic_ball->x = balls[p]->x;
                    magic_ball->y = balls[p]->y; 
@@ -691,59 +705,64 @@ static void keyboard(unsigned char key, int x, int y){
    switch(key){
 
    case 's':
+   case 'S':
    case 'r':
-            /* Pokrece se igrica pritiskom na taster s, start flag 
+   case 'R':
+             /* Pokrece se igrica pritiskom na taster s, start flag 
                postavljamo na 1, da bismo znali da vise ne treba da
                ispisujemo poruku "Press s to start", a pause_flag je 
                sada postavljen na 0. 
                U slucaju tastera r, igrica se pokrece nakon sto je
                pauzirana. */ 
-            if (!animation_active) {
-                glutTimerFunc(10, timer, 0);
-                animation_active = 1;
-                start_flag = 1;
-                pause_flag = 0;
-            }
-            break;
+             if (!animation_active) {
+                 glutTimerFunc(REFRESH, timer, 0);
+                 animation_active = 1;
+                 start_flag = 1;
+                 pause_flag = 0;
+             }
+             break;
    case 'p':
-            /* Pauzira se igrica, pause flag postavljamo na 1 da bismo znali
-               da treba da ispisemo poruku "Game paused". */
+   case 'P':
+             /* Pauzira se igrica, pause flag postavljamo na 1 da bismo znali
+                da treba da ispisemo poruku "Game paused". */
              animation_active = 0;
              pause_flag = 1;
              break;
    case 'd':
-            
-            /* Kretanje u desno sve dok ne dodjemo do granice. */
-            if(animation_active && player_x <= clip_area_x_right - 0.05){
-               player_x += 0.03;
-     	    } 
-	    break;
+   case 'D':         
+             /* Kretanje u desno sve dok ne dodjemo do granice. */
+             if(animation_active && player_x <= clip_area_x_right - 0.05){
+                player_x += 0.03;
+     	     }  
+	     break;
    case 'a':
-            /* Kretanje u levo sve dok ne dodjemo do granice. */
-	    if(animation_active && player_x >= clip_area_x_left + 0.05){
-	       player_x -= 0.03;       
-	    } 
-	    break;
+   case 'A':
+             /* Kretanje u levo sve dok ne dodjemo do granice. */
+	     if(animation_active && player_x >= clip_area_x_left + 0.05){
+	        player_x -= 0.03;       
+	     } 
+	     break;
    case 'f':
-            /* Ova provera sprecava igraca da spamuje sa pucanjem.
-               Kao i u originalnoj igrici, ako igrac promasi loptice,
-               mora da saceka da strela dodje do vrha ekrana, pa tek
-               onda moze opet da puca. */
+   case 'F':
+             /* Ova provera sprecava igraca da spamuje sa pucanjem.
+                Kao i u originalnoj igrici, ako igrac promasi loptice,
+                mora da saceka da strela dodje do vrha ekrana, pa tek
+                onda moze opet da puca. */
   
-            if(!arrow_animation){
-               /* Postavljamo x koordinatu strele na x koordinatu igraca. */
-               arrow_x = player_x;
-               arrow_y = -0.65;
-               if(animation_active){
-          	  glutTimerFunc(REFRESH, timer, 0);
-		  arrow_animation = 1;
-	       }          	
-            }
-            break;
+             if(!arrow_animation){
+                /* Postavljamo x koordinatu strele na x koordinatu igraca. */
+                arrow_x = player_x;
+                arrow_y = -0.65;
+                if(animation_active){
+              	   glutTimerFunc(REFRESH, timer, 0);
+		   arrow_animation = 1;
+	        }          	
+             }
+             break;
    case 27:
-	   /* Izlazi se iz igrice. */
-           exit(0);
-           break;
+	    /* Izlazi se iz igrice. */
+            exit(0);
+            break;
    }
 }
 
