@@ -12,12 +12,12 @@ isteka vremena.
 
 ## :video_game: Kontrole
 
-Kontrola | Akcija
----- | ---- |
-s | start igre |
-p | pauziraj igru |
-r | nastavi igru|
-a | kretanje ulevo |
-d | kretanje udesno |
-f | pucanje |
-esc | izlazak iz igre |
+Taster | Akcija
+:----: | :----: |
+`s` | start igre |
+`p` | pauziraj igru |
+`r` | nastavi igru|
+`a` | kretanje ulevo |
+`d` | kretanje udesno |
+`f` | pucanje |
+`esc` | izlazak iz igre |
