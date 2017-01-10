@@ -313,7 +313,7 @@ static void draw_arrow(){
      glVertex3f(arrow_x, arrow_y, 0);
      glVertex3f(arrow_x + 0.015, arrow_y - 0.015, 0);
      glVertex3f(arrow_x, arrow_y, 0);
-     glVertex3f(arrow_x, arrow_y - 0.15, 0);
+     glVertex3f(arrow_x, arrow_y - 0.1, 0);
      glVertex3f(arrow_x, arrow_y, 0);
     glEnd();
    glPopMatrix();
@@ -405,16 +405,18 @@ static void draw_magic_ball(){
 
 static void draw_background(){
  
-   /* Crtamo sarenu pozadinu. */
+   /* Crtamo sarenu pozadinu, boje ce se polako menjati jer figurise
+      promenljiva timer_x. */
+
    glPushMatrix();
      glBegin(GL_QUADS);	
        glColor3f(0.1, 0.4, 0.3);
        glVertex2f(-1.0, -0.9);
        glColor3f(1.0, 0.2, 0.5);  
        glVertex2f(1.0, -0.9);
-       glColor3f(0.1, 0.7, 1.0);
+       glColor3f(0.1, 0.7 + timer_x, 1.0);
        glVertex2f(1.0, 1.0);
-       glColor3f(0.4, 0.9, 0.7);
+       glColor3f(0.4 + timer_x, 0.9, 0.7);
        glVertex2f(-1.0, 1.0);
      glEnd();
    glPopMatrix();
