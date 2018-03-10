@@ -5,6 +5,7 @@ __Let's pop some bubbles!__ :boom:
 ## :page_with_curl: Description
 
 Rebbubled is a simple remake of the game [Bubble Trouble](https://www.miniclip.com/games/bubble-trouble/en/), developed using [OpenGL and GLUT](https://www.opengl.org/resources/libraries/glut/) library written in C.
+
 This game is developed as a project for Computer Graphics course at the [Faculty of Mathematics](http://www.matf.bg.ac.rs/eng/).
 
 ## :computer: Getting Started
